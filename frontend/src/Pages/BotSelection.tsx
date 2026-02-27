@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -13,6 +13,9 @@ import { Separator } from "../components/ui/separator";
 import { createDebate } from "@/services/vsbot";
 import { useAtom } from "jotai";
 import { userAtom } from "@/state/userAtom";
+
+// Constants
+const TOPIC_MAX_LENGTH = 200;
 
 // Bot type definition
 interface Bot {
@@ -219,7 +222,9 @@ const BotSelection: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
 
-  const TOPIC_MAX_LENGTH = 200;
+  // Refs for race condition fixes
+  const hasLoadedRef = useRef(false);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const effectiveTopic = topic === "custom" ? customTopic : topic;
   const selectedBotObj = selectedBot
@@ -314,10 +319,13 @@ const BotSelection: React.FC = () => {
         console.error('Failed to load saved state:', error);
       }
     }
+    hasLoadedRef.current = true;
   }, []);
 
   // Save form state to localStorage whenever it changes
   useEffect(() => {
+    if (!hasLoadedRef.current) return;
+    
     const stateToSave = {
       selectedBot,
       topic,
@@ -327,6 +335,15 @@ const BotSelection: React.FC = () => {
     };
     localStorage.setItem('botSelectionState', JSON.stringify(stateToSave));
   }, [selectedBot, topic, customTopic, stance, phaseTimings]);
+
+  // Cleanup navigation timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) {
+        clearTimeout(navTimerRef.current);
+      }
+    };
+  }, []);
 
   const startDebate = async () => {
     // Prevent double-clicks
@@ -398,14 +415,15 @@ const BotSelection: React.FC = () => {
       };
       
       // Navigate after brief delay to show success message
-      setTimeout(() => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      navTimerRef.current = setTimeout(() => {
         navigate(`/debate/${data.debateId}`, { state });
       }, 1000);
     } catch (error) {
       setError("Failed to start debate");
+      setIsCreating(false);
     } finally {
       setIsLoading(false);
-      setIsCreating(false);
     }
   };
 
@@ -468,10 +486,10 @@ const BotSelection: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {botError && (
-                  <p className="text-red-500 text-xs mt-2">{botError}</p>
-                )}
               </div>
+            )}
+            {botError && (
+              <p className="text-red-500 text-xs mt-2">{botError}</p>
             )}
 
             {/* Difficulty Cards (Fixed Height Scroller) */}
@@ -591,9 +609,7 @@ const BotSelection: React.FC = () => {
                         {topicError && (
                           <p className="text-red-500 text-xs">{topicError}</p>
                         )}
-                        <span className={`text-xs text-muted-foreground ${
-                          topicError ? "ml-auto" : ""
-                        }`}>
+                        <span className="text-xs text-muted-foreground ml-auto">
                           {customTopic.length}/{TOPIC_MAX_LENGTH}
                         </span>
                       </div>
@@ -650,7 +666,7 @@ const BotSelection: React.FC = () => {
 
               <Button
                 onClick={startDebate}
-                disabled={!selectedBot || !effectiveTopic || effectiveTopic.trim() === "" || topicError || isLoading || isCreating}
+                disabled={!selectedBot || !effectiveTopic || effectiveTopic.trim() === "" || !!topicError || isLoading || isCreating}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors shadow-md"
               >
                 Start Debate 🚀
