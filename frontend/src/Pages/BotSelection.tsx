@@ -22,6 +22,7 @@ interface Bot {
   avatar: string;
   quote: string;
   rating: number;
+  specialMessage: string;
 }
 
 // Bot definitions
@@ -34,6 +35,7 @@ const allBots: Bot[] = [
     avatar: "/images/rookie_rick.jpg",
     quote: "Uh, wait, what's your point again?",
     rating: 1200,
+    specialMessage: "Get ready for a charming, underdog performance!",
   },
   {
     name: "Casual Casey",
@@ -42,6 +44,7 @@ const allBots: Bot[] = [
     avatar: "/images/casual_casey.jpg",
     quote: "Let's just chill and chat, okay?",
     rating: 1300,
+    specialMessage: "Relax and enjoy the laid-back debate vibe!",
   },
   {
     name: "Moderate Mike",
@@ -50,6 +53,7 @@ const allBots: Bot[] = [
     avatar: "/images/moderate_mike.jpg",
     quote: "I see your side, but here's mine.",
     rating: 1500,
+    specialMessage: "A balanced challenge awaits you!",
   },
   {
     name: "Sassy Sarah",
@@ -58,6 +62,7 @@ const allBots: Bot[] = [
     avatar: "/images/sassy_sarah.jpg",
     quote: "Oh honey, you're in for it now!",
     rating: 1600,
+    specialMessage: "Prepare for sass and a bit of spice in the debate!",
   },
   {
     name: "Innovative Iris",
@@ -66,6 +71,7 @@ const allBots: Bot[] = [
     avatar: "/images/innovative_iris.jpg",
     quote: "Fresh ideas fuel productive debates.",
     rating: 1550,
+    specialMessage: "Expect creative insights and fresh ideas!",
   },
   {
     name: "Tough Tony",
@@ -74,6 +80,7 @@ const allBots: Bot[] = [
     avatar: "/images/tough_tony.jpg",
     quote: "Prove it or step aside.",
     rating: 1700,
+    specialMessage: "Brace yourself for a no-nonsense, hard-hitting debate!",
   },
   {
     name: "Expert Emma",
@@ -82,6 +89,7 @@ const allBots: Bot[] = [
     avatar: "/images/expert_emma.jpg",
     quote: "Facts don't care about your feelings.",
     rating: 1800,
+    specialMessage: "Expert-level debate incoming – sharpen your wit!",
   },
   {
     name: "Grand Greg",
@@ -90,6 +98,7 @@ const allBots: Bot[] = [
     avatar: "/images/grand_greg.jpg",
     quote: "Checkmate. Your move.",
     rating: 2000,
+    specialMessage: "A legendary showdown is about to begin!",
   },
   // Cinematic bots
   {
@@ -100,6 +109,7 @@ const allBots: Bot[] = [
     quote:
       "Hmm, strong your point is. But ask yourself, does the tree fall because it wills, or because the wind commands?",
     rating: 2400,
+    specialMessage: "Prepare for wisdom wrapped in riddles!",
   },
   {
     name: "Tony Stark",
@@ -109,6 +119,7 @@ const allBots: Bot[] = [
     quote:
       "Nice try, but your logic's running on fumes. Step aside, I'll show you how a genius does it.",
     rating: 2200,
+    specialMessage: "Get ready for sharp wit and genius banter!",
   },
   {
     name: "Professor Dumbledore",
@@ -118,6 +129,7 @@ const allBots: Bot[] = [
     quote:
       "A valid point, but have you considered its ripple effects? Let us explore the deeper truth.",
     rating: 2500,
+    specialMessage: "A strategic and insightful debate awaits!",
   },
   {
     name: "Rafiki",
@@ -127,6 +139,7 @@ const allBots: Bot[] = [
     quote:
       "Haha! You think too hard, my friend! The answer's right there, like a monkey on a branch!",
     rating: 1800,
+    specialMessage: "Expect laughter and surprising wisdom!",
   },
   {
     name: "Darth Vader",
@@ -136,6 +149,7 @@ const allBots: Bot[] = [
     quote:
       "Your reasoning falters. Submit to the strength of my argument, or be crushed.",
     rating: 2300,
+    specialMessage: "Brace for an intense, commanding debate!",
   },
 ];
 
@@ -168,40 +182,6 @@ const Loader: React.FC = () => (
   </div>
 );
 
-// Returns a custom special message for each bot
-const getBotSpecialMessage = (botName: string): string => {
-  switch (botName) {
-    case "Rookie Rick":
-      return "Get ready for a charming, underdog performance!";
-    case "Casual Casey":
-      return "Relax and enjoy the laid-back debate vibe!";
-    case "Moderate Mike":
-      return "A balanced challenge awaits you!";
-    case "Sassy Sarah":
-      return "Prepare for sass and a bit of spice in the debate!";
-    case "Innovative Iris":
-      return "Expect creative insights and fresh ideas!";
-    case "Tough Tony":
-      return "Brace yourself for a no-nonsense, hard-hitting debate!";
-    case "Expert Emma":
-      return "Expert-level debate incoming – sharpen your wit!";
-    case "Grand Greg":
-      return "A legendary showdown is about to begin!";
-    case "Yoda":
-      return "Prepare for wisdom wrapped in riddles!";
-    case "Tony Stark":
-      return "Get ready for sharp wit and genius banter!";
-    case "Professor Dumbledore":
-      return "A strategic and insightful debate awaits!";
-    case "Rafiki":
-      return "Expect laughter and surprising wisdom!";
-    case "Darth Vader":
-      return "Brace for an intense, commanding debate!";
-    default:
-      return "";
-  }
-};
-
 const BotSelection: React.FC = () => {
   const [selectedBot, setSelectedBot] = useState<string | null>(null);
   const [topic, setTopic] = useState<string>("custom");
@@ -210,6 +190,7 @@ const BotSelection: React.FC = () => {
   const [phaseTimings, setPhaseTimings] =
     useState<{ name: string; time: number }[]>(defaultPhaseTimings);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isCreating, setIsCreating] = useState<boolean>(false);
   const [user] = useAtom(userAtom);
   const [fieldErrors, setFieldErrors] = useState<{
     bot?: string;
@@ -220,7 +201,7 @@ const BotSelection: React.FC = () => {
   const navigate = useNavigate();
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasLoadedRef = useRef(false);
+  const skipInitialPersistRef = useRef(true);
 
   useEffect(() => {
     const savedState = localStorage.getItem('botSelectionState');
@@ -236,20 +217,21 @@ const BotSelection: React.FC = () => {
         console.error('Failed to load saved state:', error);
       }
     }
-    hasLoadedRef.current = true;
   }, []);
 
   useEffect(() => {
-    if (hasLoadedRef.current) {
-      const stateToSave = {
-        selectedBot,
-        topic,
-        customTopic,
-        stance,
-        phaseTimings,
-      };
-      localStorage.setItem('botSelectionState', JSON.stringify(stateToSave));
+    if (skipInitialPersistRef.current) {
+      skipInitialPersistRef.current = false;
+      return;
     }
+    const stateToSave = {
+      selectedBot,
+      topic,
+      customTopic,
+      stance,
+      phaseTimings,
+    };
+    localStorage.setItem('botSelectionState', JSON.stringify(stateToSave));
   }, [selectedBot, topic, customTopic, stance, phaseTimings]);
 
   useEffect(() => {
@@ -307,7 +289,7 @@ const BotSelection: React.FC = () => {
   };
 
   const startDebate = async () => {
-    if (isLoading) return;
+    if (isLoading || isCreating) return;
     const newErrors: typeof fieldErrors = {};
     let isValid = true;
 
@@ -351,8 +333,10 @@ const BotSelection: React.FC = () => {
 
     try {
       setIsLoading(true);
+      setIsCreating(true);
       const data = await createDebate(debatePayload);
       setShowSuccess(true);
+      localStorage.removeItem('botSelectionState');
       const state = {
         ...data,
         phaseTimings,
@@ -362,12 +346,15 @@ const BotSelection: React.FC = () => {
         botLevel: bot.level,
         topic: effectiveTopic.trim(),
       };
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
       navTimerRef.current = setTimeout(() => {
         navigate(`/debate/${data.debateId}`, { state });
+        setIsCreating(false);
       }, 1500);
     } catch (error) {
       setFieldErrors({ bot: "Failed to start debate. Please try again." });
       setShowSuccess(false);
+      setIsCreating(false);
     } finally {
       setIsLoading(false);
     }
@@ -527,9 +514,9 @@ const BotSelection: React.FC = () => {
               <p className="text-sm text-muted-foreground">
                 Configure your topic, stance, and phase timings.
               </p>
-              {selectedBot && (
+              {selectedBotObj && selectedBotObj.specialMessage && (
                 <div className="mt-2 p-2 bg-card border border-border rounded-md text-foreground text-sm font-medium">
-                  {getBotSpecialMessage(selectedBot)}
+                  {selectedBotObj.specialMessage}
                 </div>
               )}
             </div>
@@ -541,10 +528,10 @@ const BotSelection: React.FC = () => {
                   <label className="block text-sm text-muted-foreground mb-1">
                     Debate Topic
                   </label>
-                  <Select onValueChange={(val) => {
+                  <Select value={topic} onValueChange={(val) => {
                     setTopic(val);
                     setFieldErrors((prev) => ({ ...prev, topic: undefined }));
-                  }} defaultValue="custom">
+                  }}>
                     <SelectTrigger className="w-full bg-background text-foreground border-border">
                       <SelectValue placeholder="Select a topic" />
                     </SelectTrigger>
@@ -576,7 +563,7 @@ const BotSelection: React.FC = () => {
                   <label className="block text-sm text-muted-foreground mb-1">
                     Your Stance
                   </label>
-                  <Select onValueChange={setStance} defaultValue="random">
+                  <Select value={stance} onValueChange={setStance}>
                     <SelectTrigger className="w-full bg-background text-foreground border-border">
                       <SelectValue placeholder="Choose your stance" />
                     </SelectTrigger>
@@ -622,10 +609,10 @@ const BotSelection: React.FC = () => {
 
               <Button
                 onClick={startDebate}
-                disabled={isLoading}
+                disabled={isLoading || isCreating}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors shadow-md"
               >
-                {isLoading ? 'Creating Debate...' : 'Start Debate 🚀'}
+                {isLoading || isCreating ? 'Creating Debate...' : 'Start Debate 🚀'}
               </Button>
             </div>
           </div>
