@@ -14,9 +14,6 @@ import { createDebate } from "@/services/vsbot";
 import { useAtom } from "jotai";
 import { userAtom } from "@/state/userAtom";
 
-// Constants
-const TOPIC_MAX_LENGTH = 200;
-
 // Bot type definition
 interface Bot {
   name: string;
@@ -214,63 +211,63 @@ const BotSelection: React.FC = () => {
     useState<{ name: string; time: number }[]>(defaultPhaseTimings);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [user] = useAtom(userAtom);
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    bot?: string;
+    topic?: string;
+    timings?: string;
+  }>({});
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
-  const [topicError, setTopicError] = useState<string | null>(null);
-  const [botError, setBotError] = useState<string | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
-
-  // Refs for race condition fixes
-  const hasLoadedRef = useRef(false);
+  const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    const savedState = localStorage.getItem('botSelectionState');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        setSelectedBot(parsed.selectedBot ?? null);
+        setTopic(parsed.topic ?? "custom");
+        setCustomTopic(parsed.customTopic ?? "");
+        setStance(parsed.stance ?? "random");
+        setPhaseTimings(parsed.phaseTimings ?? defaultPhaseTimings);
+      } catch (error) {
+        console.error('Failed to load saved state:', error);
+      }
+    }
+    hasLoadedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (hasLoadedRef.current) {
+      const stateToSave = {
+        selectedBot,
+        topic,
+        customTopic,
+        stance,
+        phaseTimings,
+      };
+      localStorage.setItem('botSelectionState', JSON.stringify(stateToSave));
+    }
+  }, [selectedBot, topic, customTopic, stance, phaseTimings]);
+
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) {
+        clearTimeout(navTimerRef.current);
+      }
+      setShowSuccess(false);
+    };
+  }, []);
 
   const effectiveTopic = topic === "custom" ? customTopic : topic;
   const selectedBotObj = selectedBot
     ? allBots.find((b) => b.name === selectedBot)
     : null;
 
-  // Validate custom topic
-  const validateCustomTopic = (value: string) => {
-    if (topic === "custom") {
-      if (value.trim() === "") {
-        setTopicError("Please enter a topic");
-        return false;
-      } else if (value.length > TOPIC_MAX_LENGTH) {
-        setTopicError(`Topic must be ${TOPIC_MAX_LENGTH} characters or less`);
-        return false;
-      } else {
-        setTopicError(null);
-        return true;
-      }
-    }
-    return true;
-  };
-
-  // Handle custom topic change with validation
-  const handleCustomTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value.length <= TOPIC_MAX_LENGTH) {
-      setCustomTopic(value);
-      if (value.trim() !== "") {
-        setTopicError(null);
-      }
-    }
-  };
-
-  // Handle bot selection with validation
-  const handleBotSelection = (botName: string) => {
-    setSelectedBot(botName);
-    setBotError(null);
-  };
-
   // Difficulty levels with counts, sorted by difficulty
   const levels = [
-    {
-      name: "Legends",
-      count: allBots.filter((bot) => bot.level === "Legends").length,
-    },
     {
       name: "Easy",
       count: allBots.filter((bot) => bot.level === "Easy").length,
@@ -287,97 +284,55 @@ const BotSelection: React.FC = () => {
       name: "Expert",
       count: allBots.filter((bot) => bot.level === "Expert").length,
     },
+    {
+      name: "Legends",
+      count: allBots.filter((bot) => bot.level === "Legends").length,
+    },
   ].filter((level) => level.count > 0);
 
   // Update phase timing ensuring the value is within the allowed range
   const updatePhaseTiming = (phaseIndex: number, value: string) => {
     const newTimings = [...phaseTimings];
-    const parsedValue = parseInt(value, 10);
-    const timeInSeconds = isNaN(parsedValue)
-      ? phaseTimings[phaseIndex].time
-      : Math.max(60, Math.min(600, parsedValue));
+    // Allow typing freely; validation happens on submit or via inline warnings
+    const parsedValue = value === "" ? 0 : parseInt(value, 10);
+    const timeInSeconds = isNaN(parsedValue) ? 0 : parsedValue;
+
     newTimings[phaseIndex].time = timeInSeconds;
     setPhaseTimings(newTimings);
+    if (fieldErrors.timings) setFieldErrors((prev) => ({ ...prev, timings: undefined }));
   };
 
   const toggleLevel = (level: string) => {
     setExpandedLevel(expandedLevel === level ? null : level);
   };
 
-  // Load saved form state on component mount
-  useEffect(() => {
-    const savedState = localStorage.getItem('botSelectionState');
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setSelectedBot(parsed.selectedBot);
-        setTopic(parsed.topic);
-        setCustomTopic(parsed.customTopic || "");
-        setStance(parsed.stance);
-        setPhaseTimings(parsed.phaseTimings || defaultPhaseTimings);
-      } catch (error) {
-        console.error('Failed to load saved state:', error);
-      }
-    }
-    hasLoadedRef.current = true;
-  }, []);
-
-  // Save form state to localStorage whenever it changes
-  useEffect(() => {
-    if (!hasLoadedRef.current) return;
-    
-    const stateToSave = {
-      selectedBot,
-      topic,
-      customTopic,
-      stance,
-      phaseTimings
-    };
-    localStorage.setItem('botSelectionState', JSON.stringify(stateToSave));
-  }, [selectedBot, topic, customTopic, stance, phaseTimings]);
-
-  // Cleanup navigation timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (navTimerRef.current) {
-        clearTimeout(navTimerRef.current);
-      }
-    };
-  }, []);
-
   const startDebate = async () => {
-    // Prevent double-clicks
-    if (isCreating) return;
-    setIsCreating(true);
+    if (isLoading) return;
+    const newErrors: typeof fieldErrors = {};
+    let isValid = true;
 
-    // Clear previous errors
-    setError(null);
-    setTopicError(null);
-    setBotError(null);
-
-    // Validate bot selection
     if (!selectedBot) {
-      setBotError("Please select a bot");
-      setIsCreating(false);
-      return;
+      newErrors.bot = "Please select a bot";
+      isValid = false;
     }
 
-    // Validate topic
-    if (!effectiveTopic || effectiveTopic.trim() === "") {
-      setTopicError("Please enter a topic");
-      setIsCreating(false);
-      return;
+    if (!effectiveTopic.trim()) {
+      newErrors.topic = "Please select or enter a topic";
+      isValid = false;
     }
 
-    if (!validateCustomTopic(customTopic)) {
-      setIsCreating(false);
-      return;
+    const invalidTiming = phaseTimings.some((p) => p.time < 60 || p.time > 600);
+    if (invalidTiming) {
+      newErrors.timings = "Phases must be between 60s and 600s";
+      isValid = false;
     }
+
+    setFieldErrors(newErrors);
+    if (!isValid) return;
 
     const bot = allBots.find((b) => b.name === selectedBot);
     if (!bot) {
-      setError("Selected bot not found");
-      setIsCreating(false);
+      setFieldErrors({ bot: "Selected bot not found" });
       return;
     }
 
@@ -388,7 +343,7 @@ const BotSelection: React.FC = () => {
     const debatePayload = {
       botName: bot.name,
       botLevel: bot.level,
-      topic: effectiveTopic,
+      topic: effectiveTopic.trim(),
       stance: finalStance,
       history: [],
       phaseTimings,
@@ -397,13 +352,7 @@ const BotSelection: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await createDebate(debatePayload);
-      
-      // Show success toast
       setShowSuccess(true);
-      
-      // Clear localStorage after successful creation
-      localStorage.removeItem('botSelectionState');
-      
       const state = {
         ...data,
         phaseTimings,
@@ -411,17 +360,14 @@ const BotSelection: React.FC = () => {
         userId: user?.email || "guest@example.com",
         botName: bot.name,
         botLevel: bot.level,
-        topic: effectiveTopic,
+        topic: effectiveTopic.trim(),
       };
-      
-      // Navigate after brief delay to show success message
-      if (navTimerRef.current) clearTimeout(navTimerRef.current);
       navTimerRef.current = setTimeout(() => {
         navigate(`/debate/${data.debateId}`, { state });
-      }, 1000);
+      }, 1500);
     } catch (error) {
-      setError("Failed to start debate");
-      setIsCreating(false);
+      setFieldErrors({ bot: "Failed to start debate. Please try again." });
+      setShowSuccess(false);
     } finally {
       setIsLoading(false);
     }
@@ -431,7 +377,12 @@ const BotSelection: React.FC = () => {
     <>
       {isLoading && <Loader />}
       {showSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse">
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse"
+        >
           Debate created successfully! Topic: "{effectiveTopic}"
         </div>
       )}
@@ -444,7 +395,6 @@ const BotSelection: React.FC = () => {
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Select a bot and set up your debate challenge.
           </p>
-          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
         </div>
 
         {/* Main Content Grid */}
@@ -454,6 +404,7 @@ const BotSelection: React.FC = () => {
             <h2 className="text-xl font-light text-foreground mb-4">
               Pick Your <span className="text-primary">Bot</span>
             </h2>
+            {fieldErrors.bot && <p className="text-red-500 text-sm mb-2">{fieldErrors.bot}</p>}
 
             {/* Selected Bot Preview */}
             {selectedBotObj && (
@@ -487,9 +438,6 @@ const BotSelection: React.FC = () => {
                   </div>
                 </div>
               </div>
-            )}
-            {botError && (
-              <p className="text-red-500 text-xs mt-2">{botError}</p>
             )}
 
             {/* Difficulty Cards (Fixed Height Scroller) */}
@@ -527,7 +475,20 @@ const BotSelection: React.FC = () => {
                         .map((bot) => (
                           <div
                             key={bot.name}
-                            onClick={() => handleBotSelection(bot.name)}
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={selectedBot === bot.name}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelectedBot(bot.name);
+                                setFieldErrors((prev) => ({ ...prev, bot: undefined }));
+                              }
+                            }}
+                            onClick={() => {
+                              setSelectedBot(bot.name);
+                              setFieldErrors((prev) => ({ ...prev, bot: undefined }));
+                            }}
                             className={`relative flex flex-col items-center p-2 rounded-md border transition-colors cursor-pointer group ${
                               selectedBot === bot.name
                                 ? "border-2 border-primary bg-primary/10"
@@ -542,7 +503,7 @@ const BotSelection: React.FC = () => {
                               />
                             </div>
                             {/* Hover overlay */}
-                            <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-md">
+                            <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 rounded-md">
                               <h3 className="text-sm font-medium text-white text-center">
                                 {bot.name}
                               </h3>
@@ -580,7 +541,10 @@ const BotSelection: React.FC = () => {
                   <label className="block text-sm text-muted-foreground mb-1">
                     Debate Topic
                   </label>
-                  <Select onValueChange={setTopic} defaultValue="custom">
+                  <Select onValueChange={(val) => {
+                    setTopic(val);
+                    setFieldErrors((prev) => ({ ...prev, topic: undefined }));
+                  }} defaultValue="custom">
                     <SelectTrigger className="w-full bg-background text-foreground border-border">
                       <SelectValue placeholder="Select a topic" />
                     </SelectTrigger>
@@ -594,27 +558,17 @@ const BotSelection: React.FC = () => {
                     </SelectContent>
                   </Select>
                   {topic === "custom" && (
-                    <div>
-                      <Input
-                        value={customTopic}
-                        onChange={handleCustomTopicChange}
-                        onBlur={() => validateCustomTopic(customTopic)}
-                        placeholder="Enter your custom topic"
-                        maxLength={TOPIC_MAX_LENGTH}
-                        className={`mt-2 bg-background text-foreground border-border ${
-                          topicError ? "border-red-500" : ""
-                        }`}
-                      />
-                      <div className="flex justify-between items-center mt-1">
-                        {topicError && (
-                          <p className="text-red-500 text-xs">{topicError}</p>
-                        )}
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {customTopic.length}/{TOPIC_MAX_LENGTH}
-                        </span>
-                      </div>
-                    </div>
+                    <Input
+                      value={customTopic}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setCustomTopic(e.target.value);
+                        setFieldErrors((prev) => ({ ...prev, topic: undefined }));
+                      }}
+                      placeholder="Enter your custom topic"
+                      className="mt-2 bg-background text-foreground border-border"
+                    />
                   )}
+                  {fieldErrors.topic && <p className="text-red-500 text-xs mt-1">{fieldErrors.topic}</p>}
                 </div>
 
                 {/* Stance Selection */}
@@ -640,6 +594,7 @@ const BotSelection: React.FC = () => {
                 <label className="block text-sm text-muted-foreground mb-2">
                   Phase Timings (seconds)
                 </label>
+                {fieldErrors.timings && <p className="text-red-500 text-xs mb-2">{fieldErrors.timings}</p>}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {phaseTimings.map((phase, index) => (
                     <div
@@ -656,9 +611,10 @@ const BotSelection: React.FC = () => {
                           updatePhaseTiming(index, e.target.value)
                         }
                         className="text-xs bg-background text-foreground border-border"
-                        min="60"
-                        max="600"
                       />
+                      {(phase.time < 60 || phase.time > 600) && (
+                        <span className="text-[10px] text-red-500 mt-1">Min 60s, Max 600s</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -666,10 +622,10 @@ const BotSelection: React.FC = () => {
 
               <Button
                 onClick={startDebate}
-                disabled={!selectedBot || !effectiveTopic || effectiveTopic.trim() === "" || !!topicError || isLoading || isCreating}
+                disabled={isLoading}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors shadow-md"
               >
-                Start Debate 🚀
+                {isLoading ? 'Creating Debate...' : 'Start Debate 🚀'}
               </Button>
             </div>
           </div>
