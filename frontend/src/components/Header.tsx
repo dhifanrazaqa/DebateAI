@@ -113,7 +113,7 @@ function Header() {
                         ? "Support DebateAI" 
                         : value === "bot-selection" 
                         ? "Bot Selection" 
-                        : value.replace("-", " ")}
+                        : value.replace(/-/g, " ")}
                     </BreadcrumbPage>
                   ) : (
                     <BreadcrumbLink asChild>
@@ -122,7 +122,7 @@ function Header() {
                           ? "Support DebateAI" 
                           : value === "bot-selection" 
                           ? "Bot Selection" 
-                          : value.replace("-", " ")}
+                          : value.replace(/-/g, " ")}
                       </NavLink>
                     </BreadcrumbLink>
                   )}
