@@ -17,6 +17,7 @@ import StrengthenArgument from './Pages/StrengthenArgument';
 import SpeechTest from './Pages/SpeechTest';
 // Layout
 import Layout from './components/Layout';
+import SupportOpenSource from './Pages/SupportOpenSource';
 import CoachPage from './Pages/CoachPage';
 import ChatRoom from './components/ChatRoom';
 import TournamentHub from './Pages/TournamentHub';
@@ -61,6 +62,12 @@ function AppRoutes() {
       <Route path='/auth' element={<Authentication />} />
       <Route path='/admin/login' element={<AdminSignup />} />
       <Route path='/admin/dashboard' element={<AdminDashboard />} />
+      {/* Public routes with layout */}
+      <Route element={<Layout />}>
+        <Route path='about' element={<About />} />
+        <Route path='support-debateai' element={<SupportOpenSource />} />
+      </Route>
+
       {/* Protected routes with layout */}
       <Route element={<ProtectedRoute />}>
         <Route path='/' element={<Layout />}>
@@ -68,7 +75,6 @@ function AppRoutes() {
           <Route path='leaderboard' element={<Leaderboard />} />
           <Route path='profile' element={<Profile />} />
           <Route path='community' element={<CommunityFeed />} />
-          <Route path='about' element={<About />} />
           <Route path='team-builder' element={<TeamBuilder />} />
           <Route path='game/:userId' element={<DebateApp />} />
           <Route path='bot-selection' element={<BotSelection />} />

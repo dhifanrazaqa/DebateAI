@@ -7,6 +7,7 @@ import DebateCover from "../assets/DebateCover4.svg";
 import { Button } from "../components/ui/button";
 import { AuthContext } from "../context/authContext";
 import DebatePopup from "@/components/DebatePopup";
+import AOSSIELogo from "@/assets/aossie.png";
 
 const StartDebate = () => {
   const navigate = useNavigate();
@@ -41,6 +42,19 @@ const StartDebate = () => {
             />
           </div>
           <div className="flex w-full md:w-1/3 flex-col items-center justify-center space-y-4 p-4">
+            <div className="flex flex-col items-center mb-6">
+              <a 
+                href="https://aossie.org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="mb-2 hover:opacity-80 transition-opacity"
+              >
+                <img src={AOSSIELogo} alt="AOSSIE Logo" className="h-12 w-auto object-contain" />
+              </a>
+              <div className="text-center">
+                <span className="text-sm text-muted-foreground uppercase tracking-[0.2em] font-black">by AOSSIE</span>
+              </div>
+            </div>
             <h3 className="text-xl md:text-4xl font-bold text-center">
               Play Debate Online on the <span className="text-primary">#1</span>{" "}
               Site!

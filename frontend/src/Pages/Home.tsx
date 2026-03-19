@@ -1,18 +1,15 @@
-import DebateCover from "../assets/DebateCover4.svg";
+import React, { useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "@/context/authContext";
+import DebateCover from "../assets/DebateCover4.svg";
 import { RiRobot2Fill } from "react-icons/ri";
 import { FaHandshakeSimpleSlash } from "react-icons/fa6";
-import { useContext } from "react";
-import { AuthContext } from "@/context/authContext";
-
-{/* TODO modify the home page for already logged in and signed up state  */}
+import AOSSIELogo from "@/assets/aossie.png";
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const authContext = useContext(AuthContext);
-
-  
 
   const signupHandler = () => {
     navigate('/auth', { state: { isSignUp: true } });
@@ -21,6 +18,7 @@ const Home: React.FC = () => {
   const loginHandler = () => {
     navigate('/auth', { state: { isSignUp: false } });
   };
+
   const handlePlayDebateClick = () => {
     if (authContext?.isAuthenticated) {
       navigate('/game');  
@@ -31,7 +29,7 @@ const Home: React.FC = () => {
 
   const handlePlayBotClick = () => {
     if (authContext?.isAuthenticated) {
-      navigate('/game');  // Navigate to play page if authenticated
+      navigate('/bot-selection');  // Navigate to bot selection page
     } else {
       navigate('/auth', { state: { isSignUp: false } });  // Navigate to login page if not authenticated
     }
@@ -43,17 +41,44 @@ const Home: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <nav className="flex items-center justify-between px-4 py-4 md:px-12">
-        <h1 className="text-xl md:text-3xl font-bold">Argue-Hub</h1>
-          {
-            authContext?.isAuthenticated?(<Button onClick={logoutHandler}>Log out</Button>):(
-              <div className="flex">
-                <Button className="mr-2" onClick={loginHandler}>Login</Button>
-                <Button variant="outline" onClick={signupHandler}>Sign Up</Button>
-              </div>  
-            )
-          }
+    <div className="flex flex-col min-h-screen bg-background">
+      <nav className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-4">
+          <a 
+            href="https://aossie.org" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="p-1 hover:opacity-80 transition-opacity"
+          >
+            <img src={AOSSIELogo} alt="AOSSIE Logo" className="h-8 w-auto object-contain" />
+          </a>
+          <div className="flex flex-col">
+            <span className="text-2xl font-black tracking-tight text-primary leading-none">DebateAI</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">by AOSSIE</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {authContext?.isAuthenticated ? (
+            <Button onClick={logoutHandler} variant="destructive" size="sm">Log out</Button>
+          ) : (
+            <>
+              <Button 
+                variant="ghost" 
+                className="text-foreground hover:bg-accent"
+                onClick={loginHandler}
+              >
+                Login
+              </Button>
+              <Button 
+                variant="outline"
+                className="font-bold border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                onClick={signupHandler}
+              >
+                Sign Up
+              </Button>
+            </>
+          )}
+        </div>
       </nav>
 
       <div className="flex items-center justify-center">

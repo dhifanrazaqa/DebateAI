@@ -130,8 +130,11 @@ const CoachPage: React.FC = () => {
               Subscribe
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-4">
-            © 2025 ArgueHub. All rights reserved.
+          <p className="text-sm text-muted-foreground mt-4 italic font-medium">
+            Managed with ❤️ by <a href="https://aossie.org" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">AOSSIE</a>
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            © {new Date().getFullYear()} DebateAI. All rights reserved.
           </p>
         </div>
       </footer>

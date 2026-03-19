@@ -112,7 +112,7 @@ function About() {
 
       {/* Footer */}
       <footer className="text-center text-xs md:text-sm text-muted-foreground mt-8">
-        © 2016-2025 AOSSIE. All rights reserved.
+        © 2016-{new Date().getFullYear()} <a href="https://aossie.org" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">AOSSIE</a>. All rights reserved.
       </footer>
     </div>
   );
